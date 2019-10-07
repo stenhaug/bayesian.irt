@@ -1,6 +1,6 @@
 ---
-title: "Untitled"
-output: html_document
+title: "1_simulate_data"
+output: github_document
 ---
 
 we'll have 1000 students and 10 items. the first 9 items will be as usual. the order dependence comes from students who got the 9th item correct get a 1-unit boost to their ability for the 10th item. 
@@ -27,7 +27,7 @@ pars <-
 
 ```{r}
 # simulate
-data <- 
+sim <- 
     simdata(
         a = matrix(pars$a1, nrow = n_items, ncol = dim),
         d = matrix(pars$d, ncol = 1),
@@ -41,10 +41,10 @@ data <-
 
 # clean up
 results <- 
-    data$data %>% 
+    sim$data %>% 
     as_tibble() %>% 
     janitor::clean_names() %>% 
-    mutate(theta_1to9 = data$Theta[ , 1]) %>% 
+    mutate(theta_1to9 = sim$Theta[ , 1]) %>% 
     mutate(theta_10 = ifelse(item_9 == 1, theta_1to9 + 1, theta_1to9)) %>% 
     select(starts_with("theta"), everything())
 ```
@@ -70,8 +70,8 @@ results$item_10 <-
 # output
 
 ```{r}
-data
-
-results
+pars %>% write_rds("data-simulated/1_pars.rds")
+sim %>% write_rds("data-simulated/1_sim.rds")
+results %>% write_rds("data-simulated/1_results.rds")
 ```
 

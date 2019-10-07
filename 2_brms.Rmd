@@ -11,9 +11,9 @@ library(brms)
 
 lme4::VerbAgg %>% as_tibble()
 
-data <- read_rds("data-simulated/1_data.rds")
+results <- read_rds("data-simulated/1_results.rds")
 
-data %>% 
+results %>% 
     mutate(person = as.factor(row_number())) %>% 
     gather(item, correct, -person) %>% 
     mutate(item = item %>% parse_number() %>% as.factor())
@@ -26,6 +26,14 @@ formula_va_2pl <- bf(
   logalpha ~ 1 + (1 |i| item),
   nl = TRUE
 )
+
+formula_va_2pl <- bf(
+  correct ~ person_vs_item * exp(alpha_log),
+  person_vs_item ~ 0 + item + (1 | person),
+  alpha_log ~ 1 + (1 |i| item),
+  nl = TRUE
+)
+  
 ```
 
 ```{r}
