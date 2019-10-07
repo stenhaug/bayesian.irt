@@ -3,3 +3,5 @@
 .RData
 data-simulated/
 data-models/
+*.rds
+*.Rdata

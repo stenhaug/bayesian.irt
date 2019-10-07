@@ -1,57 +1,98 @@
 ---
-title: "Untitled"
+title: "2_brms"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
+```{r}
 library(tidyverse)
 library(brms)
-
-lme4::VerbAgg %>% as_tibble()
+library(tidybayes)
+source("R/stan.R")
 
 results <- read_rds("data-simulated/1_results.rds")
 
-results %>% 
-    mutate(person = as.factor(row_number())) %>% 
-    gather(item, correct, -person) %>% 
-    mutate(item = item %>% parse_number() %>% as.factor())
+brms_data <- 
+    results %>% 
+    select(-item_10) %>% 
+    select(starts_with("item")) %>% 
+    irt_data_wide_to_long() %>% 
+    mutate_all(as.factor)
 ```
+
+# Basic model
+
+specify and fit
 
 ```{r}
-formula_va_2pl <- bf(
-  r2 ~ exp(logalpha) * eta,
-  eta ~ 1 + (1 |i| item) + (1 | id),
-  logalpha ~ 1 + (1 |i| item),
-  nl = TRUE
-)
+formula_2pl <- 
+    bf(
+        correct ~ exp(ItemDiscLog) * PersonAbility + ItemEasy,
+        PersonAbility ~ 1 + (1 | person),
+        ItemEasy ~ 0 + item,
+        ItemDiscLog ~ 0 + item,
+        nl = TRUE
+    )
 
-formula_va_2pl <- bf(
-  correct ~ person_vs_item * exp(alpha_log),
-  person_vs_item ~ 0 + item + (1 | person),
-  alpha_log ~ 1 + (1 |i| item),
-  nl = TRUE
-)
-  
+prior_2pl <- 
+    prior("normal(0, 1)", class = "b", nlpar = "ItemEasy") +
+    prior("normal(0, 1)", class = "b", nlpar = "ItemDiscLog")
+
+fit_2pl <- 
+    brm(
+        data = brms_data,
+        formula = formula_2pl,
+        family = brmsfamily("bernoulli", "logit"),
+        prior = prior_2pl,
+        inits = 0,
+        chains = 2,
+        iter = 400,
+        file = "data-models/fit_2pl",
+    )
+
+stancode(fit_2pl)
+
+get_variables(fit_2pl) %>% View()
+
+fit_2pl %>% 
+    recover_types() %>% 
+    spread_draws(b_PersonAbility_Intercept)
+
+fit_2pl %>% 
+    recover_types() %>%
+    spread_draws(b_ItemEasy_item1)
+
+fit_2pl %>% 
+    recover_types() %>% 
+    spread_draws(b_ItemEasy_item)
 ```
+
+# Next model
 
 ```{r}
-prior_va_2pl <- 
-  prior("normal(0, 5)", class = "b", nlpar = "eta") +
-  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
-  prior("normal(0, 3)", class = "sd", group = "id", nlpar = "eta") + 
-  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "eta") +
-  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+formula_2pl <- 
+    bf(
+        correct ~ exp(ItemDiscLog) * PersonAbility + ItemEasy,
+        PersonAbility ~ 1 + (1 | person),
+        ItemEasy ~ 0 + item,
+        ItemDiscLog ~ 0 + item,
+        nl = TRUE
+    )
+
+prior_2pl <- 
+    prior("normal(0, 1)", class = "b", nlpar = "ItemEasy") +
+    prior("normal(0, 1)", class = "b", nlpar = "ItemDiscLog")
+    # prior("normal(0, 0)", class = "b", nlpar = "PersonAbility")
+    # prior("normal(1, 0)", class = "sd", nlpar = "PersonAbility")
+
+fit_2pl <- 
+    brm(
+        data = brms_data,
+        formula = formula_2pl,
+        family = brmsfamily("bernoulli", "logit"),
+        prior = prior_2pl,
+        inits = 0,
+        chains = 2,
+        iter = 400,
+        file = "data-models/fit_2pl_2",
+    )
 ```
-
-```{r}
-fit_va_2pl <- brm(
-  formula = formula_va_2pl,
-  data = VerbAgg, 
-  family = brmsfamily("bernoulli", "logit"),
-  prior = prior_va_2pl,
-)
-```
-
-

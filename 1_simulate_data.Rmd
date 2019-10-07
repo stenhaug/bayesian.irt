@@ -18,9 +18,10 @@ dim <- 1
 
 pars <-
     tibble(
+        item = 1:n_items,
         a1 = rlnorm(n_items * dim, 0, 1),
         d = rnorm(n_items)
-    )
+    ) 
 ```
 
 # first 9 items
