@@ -1,0 +1,90 @@
+---
+title: "4_comparison"
+output: github_document
+---
+
+```{r}
+library(mirt)
+library(tidyverse)
+library(rstan)
+library(tidybayes)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+source("R/stan.R")
+```
+
+# simulate data
+
+```{r}
+set.seed(1)
+n_items <- 8
+n_students <- 20000
+dim <- 1
+
+pars <-
+    tibble(
+        item = 1:n_items,
+        a1 = rlnorm(n_items * dim, 0, 1),
+        d = rnorm(n_items)
+    )
+
+sim <- 
+    simdata(
+        a = matrix(pars$a1, nrow = n_items, ncol = dim),
+        d = matrix(pars$d, ncol = 1),
+        guess = rep(0, n_items),
+        N = n_students,
+        mu = 0,
+        sigma = diag(dim),
+        itemtype = rep("3PL", n_items),
+        returnList = TRUE
+    )
+```
+
+# models
+
+1. marginal maximum likelihood
+
+2. mcmc [alpha ~ lognormal(0, 2); beta ~ normal(0, 2); theta ~ normal(0, 1);]
+
+```{r}
+mcmc_with_priors <- 
+    stan(
+        file = "stan/2pl_with_priors.stan",
+        data = 
+            sim$data %>% 
+            as_tibble() %>% 
+            irt_data_wide_to_long() %>% 
+            irt_data_long_to_stan_list(),
+        seed = 1,
+        chains = 4,
+        iter = 2000,
+        save_dso = TRUE
+    )
+```
+
+3. mcmc [no priors]
+
+```{r}
+mcmc_no_priors <- 
+    stan(
+        file = "stan/2pl_no_priors.stan",
+        data = 
+            sim$data %>% 
+            as_tibble() %>% 
+            irt_data_wide_to_long() %>% 
+            irt_data_long_to_stan_list(),
+        seed = 1,
+        chains = 4,
+        iter = 2000,
+        save_dso = TRUE
+    )
+```
+
+
+
+
+
+
+
+

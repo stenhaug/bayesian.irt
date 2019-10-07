@@ -1,7 +1,5 @@
-# bayesian.irt
+to do:
 
-<!-- badges: start -->
-<!-- badges: end -->
+1. 3_stan_all10
 
-The goal of bayesian.irt is to ...
-
+2. that one

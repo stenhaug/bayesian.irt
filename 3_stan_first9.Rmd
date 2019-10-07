@@ -6,7 +6,6 @@ output: html_document
 ```{r}
 # load("3_stan.Rdata")
 # save.image("3_stan.Rdata")
-
 library(tidyverse)
 library(rstan)
 library(tidybayes)
@@ -89,7 +88,7 @@ items %>%
 # look at students
 
 ```{r}
-# stan_model %>% recover_types %>% spread_draws(theta[1])
+# stan_model %>% recover_types() %>% spread_draws(theta[1])
 
 persons <- 
     stan_model %>% 
