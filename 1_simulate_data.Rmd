@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+we'll have 1000 students and 10 items. the first 9 items will be as usual. the order dependence comes from students who got the 9th item correct get a 1-unit boost to their ability for the 10th item. 
+
+# generate pars
+
+```{r}
+library(tidyverse)
+library(mirt)
+
+set.seed(1)
+n_items <- 9
+n_students <- 1000
+dim <- 1
+
+pars <-
+    tibble(
+        a1 = rlnorm(n_items * dim, 0, 1),
+        d = rnorm(n_items)
+    )
+```
+
+# first 9 items
+
+```{r}
+# simulate
+data <- 
+    simdata(
+        a = matrix(pars$a1, nrow = n_items, ncol = dim),
+        d = matrix(pars$d, ncol = 1),
+        guess = rep(0, n_items),
+        N = n_students,
+        mu = 0,
+        sigma = diag(dim),
+        itemtype = rep("3PL", n_items),
+        returnList = TRUE
+    )
+
+# clean up
+results <- 
+    data$data %>% 
+    as_tibble() %>% 
+    janitor::clean_names() %>% 
+    mutate(theta_1to9 = data$Theta[ , 1]) %>% 
+    mutate(theta_10 = ifelse(item_9 == 1, theta_1to9 + 1, theta_1to9)) %>% 
+    select(starts_with("theta"), everything())
+```
+
+# 10th item
+
+```{r}
+set.seed(2)
+
+results$item_10 <- 
+    simdata(
+        Theta = matrix(results$theta_10, nrow = n_students, ncol = dim),
+        a = matrix(1, nrow = 1),
+        d = matrix(0, ncol = 1),
+        guess = 0,
+        itemtype = "3PL",
+        returnList = FALSE
+    )[, 1]
+
+# results %>% select(starts_with("theta"), item_9, item_10)
+```
+
+# output
+
+```{r}
+data
+
+results
+```
+

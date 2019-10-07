@@ -1,0 +1,49 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(brms)
+
+lme4::VerbAgg %>% as_tibble()
+
+data <- read_rds("data-simulated/1_data.rds")
+
+data %>% 
+    mutate(person = as.factor(row_number())) %>% 
+    gather(item, correct, -person) %>% 
+    mutate(item = item %>% parse_number() %>% as.factor())
+```
+
+```{r}
+formula_va_2pl <- bf(
+  r2 ~ exp(logalpha) * eta,
+  eta ~ 1 + (1 |i| item) + (1 | id),
+  logalpha ~ 1 + (1 |i| item),
+  nl = TRUE
+)
+```
+
+```{r}
+prior_va_2pl <- 
+  prior("normal(0, 5)", class = "b", nlpar = "eta") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("normal(0, 3)", class = "sd", group = "id", nlpar = "eta") + 
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "eta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+```
+
+```{r}
+fit_va_2pl <- brm(
+  formula = formula_va_2pl,
+  data = VerbAgg, 
+  family = brmsfamily("bernoulli", "logit"),
+  prior = prior_va_2pl,
+)
+```
+
+
