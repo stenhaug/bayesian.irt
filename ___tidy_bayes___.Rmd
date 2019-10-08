@@ -1,0 +1,64 @@
+---
+title: "tidybayes"
+output: github_document
+---
+
+prepare
+
+```{r}
+library(tidyverse)
+library(tidybayes)
+library(rstan)
+options(mc.cores = parallel::detectCores())
+```
+
+simulate data
+
+```{r}
+n_per_group <- 1000
+
+ABC <- 
+  tibble(
+    condition = rep(c("A","B","C","D","E"), each = n_per_group),
+    response = 
+      rnorm(
+        5 * n_per_group, 
+        rep(-2:2, each = n_per_group),
+        rep(1:5, each = n_per_group))
+  )
+
+ABC %>%
+  ggplot(aes(x = condition, y = response)) +
+  geom_point(alpha = 0.01)
+```
+
+fit model
+
+```{r}
+ABC_stan <- stan_model("stan/tidybayes.stan")
+
+model <- 
+  sampling(ABC_stan, data = compose_data(ABC), control = list(adapt_delta=0.99)) %>% 
+  recover_types()
+```
+
+look at recovery
+
+```{r}
+get_variables(model)
+
+draws <- 
+  model %>% 
+  spread_draws(condition_mean[group], condition_sd[group])
+
+draws %>% 
+  ggplot(aes(x = condition_mean)) +
+  geom_histogram() +
+  facet_wrap(~ group, ncol = 1)
+
+draws %>% 
+  ggplot(aes(x = condition_sd)) +
+  geom_histogram() +
+  facet_wrap(~ group, ncol = 1)
+```
+

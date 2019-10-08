@@ -18,7 +18,8 @@ source("R/stan.R")
 ```{r}
 set.seed(1)
 n_items <- 8
-n_students <- 20000
+n_students <- 1000
+    
 dim <- 1
 
 pars <-
@@ -43,12 +44,57 @@ sim <-
 
 # models
 
-1. marginal maximum likelihood
-
-2. mcmc [alpha ~ lognormal(0, 2); beta ~ normal(0, 2); theta ~ normal(0, 1);]
+1. marginal maximum likelihood estimation 
+[theta ~ normal(0, 1)]
 
 ```{r}
-mcmc_with_priors <- 
+mmle <- mirt(sim$data, 1, "2PL")
+
+mmle_items <- 
+    coef(mmle, simplify = TRUE)$items %>% 
+    as_tibble() %>% 
+    mutate(item = row_number(), model = "mmle") %>% 
+    select(item, alpha = a1, beta = d, model)
+
+mmle_persons <- 
+    tibble(
+        person = 1:n_students,
+        theta = fscores(mmle, method = "EAP")[ , 1],
+        model = "mmle"
+    )
+```
+
+2. marginal bayesian likelihood estimation 
+[alpha ~ lognormal(0, 2); beta ~ normal(0, 2); theta ~ normal(0, 1)]
+
+```{r}
+mble_spec <-
+    str_glue(
+        "F = 1-{n_items}
+        PRIOR = (1-{n_items}, a1, lnorm, 0, 2),(1-{n_items}, d, norm, 0, 2)"
+    )
+
+mble <- mirt(sim$data, mirt.model(mble_spec))
+
+mble_items <- 
+    coef(mble, simplify = TRUE)$items %>% 
+    as_tibble() %>% 
+    mutate(item = row_number(), model = "mble") %>% 
+    select(item, alpha = a1, beta = d, model)
+
+mble_persons <- 
+    tibble(
+        person = 1:n_students,
+        theta = fscores(mble, method = "EAP")[ , 1],
+        model = "mble"
+    )
+```
+
+3. mcmc 
+[alpha ~ lognormal(0, 2); beta ~ normal(0, 2); theta ~ normal(0, 1)]
+
+```{r}
+mcmc <- 
     stan(
         file = "stan/2pl_with_priors.stan",
         data = 
@@ -61,30 +107,69 @@ mcmc_with_priors <-
         iter = 2000,
         save_dso = TRUE
     )
+
+get_variables(mcmc)
+
+mcmc_item_draws <- 
+    mcmc %>% 
+    spread_draws(alpha[item], beta[item])
+
+mcmc_items <- 
+    mcmc_item_draws %>% 
+    summarize(alpha = mean(alpha), beta = mean(beta)) %>% 
+    mutate(model = "mcmc")
+
+mcmc_person_draws <- 
+    mcmc %>% 
+    spread_draws(theta[person])
+
+mcmc_persons <- 
+    mcmc_person_draws %>% 
+    summarize(theta = mean(theta)) %>% 
+    mutate(model = "mcmc")
 ```
 
-3. mcmc [no priors]
+# items
 
 ```{r}
-mcmc_no_priors <- 
-    stan(
-        file = "stan/2pl_no_priors.stan",
-        data = 
-            sim$data %>% 
-            as_tibble() %>% 
-            irt_data_wide_to_long() %>% 
-            irt_data_long_to_stan_list(),
-        seed = 1,
-        chains = 4,
-        iter = 2000,
-        save_dso = TRUE
-    )
+all_items <- 
+    pars %>% 
+    rename(alpha = a1, beta = d) %>% 
+    mutate(model = "true") %>% 
+    bind_rows(
+        mmle_items,
+        mble_items,
+        mcmc_items
+    ) %>% 
+    gather(parameter, value, alpha, beta)
+
+all_items %>% spread(model, value)
+
+mcmc_item_draws %>% 
+    gather(parameter, value, alpha, beta) %>% 
+    ggplot(aes(x = value)) +
+    geom_histogram() +
+    facet_grid(item ~ parameter, scales = "free") +
+    geom_vline(data = all_items, aes(xintercept = value, color = model))
 ```
 
+# persons
 
-
-
-
-
-
-
+```{r}
+all_persons <- 
+    tibble(
+        person = 1:n_students,
+        theta = sim$Theta[ , 1],
+        model = "true"
+    ) %>% 
+    bind_rows(
+        mmle_persons,
+        mble_persons,
+        mcmc_persons
+    )
+    
+all_persons %>% 
+    spread(model, theta) %>% 
+    select(-person) %>% 
+    GGally::ggpairs()
+```

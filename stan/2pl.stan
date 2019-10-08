@@ -13,7 +13,8 @@ parameters {
 }
 model {
   vector[N] eta;
-  alpha ~ lognormal(0, 5);
+  alpha ~ lognormal(0, 2);
+  beta ~ normal(0, 2);
   theta ~ normal(0, 1);
   for (n in 1:N)
     eta[n] = alpha[ii[n]] * theta[jj[n]] + beta[ii[n]];
