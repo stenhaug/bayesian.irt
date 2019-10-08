@@ -36,6 +36,8 @@ stan_model <-
         save_dso = TRUE
     )
 
+traceplot(stan_model)
+
 get_variables(stan_model)
 ```
 

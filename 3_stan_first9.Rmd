@@ -34,9 +34,11 @@ stan_model <-
         data = stan_data,
         seed = 1,
         chains = 4,
-        iter = 2000,
+        iter = 8000,
         save_dso = TRUE
     )
+
+traceplot(stan_model)
 
 get_variables(stan_model)
 ```

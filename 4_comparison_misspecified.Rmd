@@ -16,7 +16,7 @@ source("R/stan.R")
 ```
 
 # simulate data
-[alpha ~ lognormal(0, 1); beta ~ normal(0, 1); theta ~ normal(0, 1)]
+[alpha ~ lognormal(0, 1); beta ~ normal(2, 1); theta ~ normal(0, 1)]
 
 ```{r}
 set.seed(1)
@@ -29,7 +29,7 @@ pars <-
     tibble(
         item = 1:n_items,
         a1 = rlnorm(n_items * dim, 0, 1),
-        d = rnorm(n_items)
+        d = rnorm(n_items, 2, 1)
     )
 
 sim <- 
