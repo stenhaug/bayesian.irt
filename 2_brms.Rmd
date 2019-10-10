@@ -96,3 +96,40 @@ fit_2pl <-
         file = "data-models/fit_2pl_2",
     )
 ```
+
+
+```{r}
+brms_data <- 
+    sim$data %>% 
+    as_tibble() %>% 
+    irt_data_wide_to_long() %>% 
+    mutate_all(as.factor)
+
+formula_2pl <- 
+    bf(
+        correct ~ exp(logalpha) * eta,
+        eta ~ 1 + (1 |i| item) + (1 | id),
+        logalpha ~ 1 + (1 |i| item),
+        nl = TRUE
+    )
+
+prior_2pl <- 
+    prior("normal(0, 5)", class = "b", nlpar = "eta") + 
+    prior("normal(0, 1)", class = "b", nlpar = "logalpha") + 
+    prior("normal(0, 3)", class = "sd", group = "id", nlpar = "eta") + 
+    prior("normal(0, 3)", class = "sd", group = "item", nlpar = "eta") +
+    prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_2pl <- 
+    brm(
+        data = brms_data,
+        formula = formula_2pl,
+        family = brmsfamily("bernoulli", "logit"),
+        prior = prior_2pl,
+        inits = 0,
+        chains = 2,
+        iter = 400,
+        file = "data-models/fit_2pl_2",
+    )
+```
+

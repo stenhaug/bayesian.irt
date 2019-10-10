@@ -1,0 +1,77 @@
+---
+title: "5_multilevel"
+output: github_document
+---
+
+trying to get multilevel to work. need to look at things like this:
+https://mc-stan.org/docs/2_18/stan-users-guide/hierarchical-logistic-regression.html
+
+```{r}
+# load("4_comparison.Rdata")
+# save.image("4_comparison.Rdata")
+library(mirt)
+library(tidyverse)
+library(rstan)
+library(tidybayes)
+library(brms)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+source("R/stan.R")
+```
+
+```{r}
+set.seed(1)
+n_items <- 10
+n_students <- 2000
+dim <- 1
+
+theta <- c(rnorm(n_students / 2, -1, 2), rnorm(n_students / 2, 1, 2))
+
+pars <-
+    tibble(
+        item = 1:n_items,
+        alpha = rlnorm(n_items, 0, 1),
+        beta = rnorm(n_items, 0, 1)
+    )
+
+sim <- 
+    simdata(
+        a = matrix(pars$alpha, nrow = n_items, ncol = dim),
+        d = matrix(pars$beta, ncol = 1),
+        guess = rep(0, n_items),
+        Theta = matrix(theta),
+        itemtype = rep("3PL", n_items),
+        returnList = TRUE
+    )
+```
+
+```{r}
+data <- 
+    sim$data %>% 
+    as_tibble() %>% 
+    irt_data_wide_to_long() %>% 
+    irt_data_long_to_stan_list()
+
+data$G <- 2
+
+data$gg <- ifelse(data$jj <= 1000, 1, 2)
+
+data %>% map(length)
+
+mcmc <- 
+    stan(
+        file = "stan/2pl_multilevel.stan",
+        data = data,
+        seed = 1,
+        chains = 4,
+        iter = 500,
+        save_dso = TRUE,
+        control = list(adapt_delta = 0.9)
+    )
+
+tidybayes::get_variables(mcmc) %>% View()
+
+str(data)
+```
+
+
