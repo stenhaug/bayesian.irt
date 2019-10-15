@@ -1,0 +1,58 @@
+---
+title: "6_order_effects"
+output: github_document
+---
+
+```{r}
+# load("3_stan_first9.Rdata")
+# save.image("3_stan_first9.Rdata")
+library(tidyverse)
+library(rstan)
+library(tidybayes)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+source("R/stan.R")
+
+pars <- read_rds("data-simulated/1_pars.rds")
+
+results <- read_rds("data-simulated/1_results.rds")
+
+stan_data <- 
+    results %>% 
+    select(starts_with("item")) %>% 
+    irt_data_wide_to_long() %>% 
+    irt_data_long_to_stan_list()
+
+stan_data$last <- 
+    tibble(
+        ii = stan_data$ii,
+        jj = stan_data$jj,
+        y = stan_data$y    
+    ) %>% 
+    arrange(jj, ii) %>% 
+    group_by(jj) %>% 
+    mutate(last = lag(y) %>% replace_na(0)) %>% 
+    ungroup() %>% 
+    pull(last)
+```
+
+fit the model
+
+```{r}
+model <- 
+    stan(
+        file = "stan/2pl_order_effects.stan",
+        data = stan_data,
+        seed = 1,
+        chains = 4,
+        iter = 1000,
+        save_dso = TRUE,
+        control = list(adapt_delta = 0.9)
+    )
+
+get_variables(model)[1:40]
+
+plot(model, pars = "boost")
+traceplot(model, pars = "boost")
+```
+

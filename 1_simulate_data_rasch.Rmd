@@ -1,0 +1,88 @@
+---
+title: "1_simulate_data"
+output: github_document
+---
+
+we'll have 1000 students and 10 items. the first 9 items will be as usual. the order dependence comes from students who got the 9th item correct get a 1-unit boost to their ability for the 10th item. 
+
+# generate pars
+
+```{r}
+library(tidyverse)
+library(mirt)
+
+set.seed(1)
+n_items <- 9
+n_students <- 10000
+dim <- 1
+
+pars <-
+    tibble(
+        item = 1:n_items,
+        a1 = 1,
+        d = rnorm(n_items)
+    ) 
+```
+
+# first 9 items
+
+```{r}
+# simulate
+sim <- 
+    simdata(
+        a = matrix(pars$a1, nrow = n_items, ncol = dim),
+        d = matrix(pars$d, ncol = 1),
+        guess = rep(0, n_items),
+        N = n_students,
+        mu = 0,
+        sigma = diag(dim),
+        itemtype = rep("3PL", n_items),
+        returnList = TRUE
+    )
+
+# clean up
+results <- 
+    sim$data %>% 
+    as_tibble() %>% 
+    janitor::clean_names() %>% 
+    mutate(theta_1to9 = sim$Theta[ , 1]) %>% 
+    mutate(theta_10 = ifelse(item_9 == 1, theta_1to9 + 1, theta_1to9)) %>% # THIS IS WHERE WE ADD
+    select(starts_with("theta"), everything())
+```
+
+# 10th item
+
+```{r}
+set.seed(2)
+
+results$item_10 <- 
+    simdata(
+        Theta = matrix(results$theta_10, nrow = n_students, ncol = dim),
+        a = matrix(1, nrow = 1),
+        d = matrix(0, ncol = 1),
+        guess = 0,
+        itemtype = "3PL",
+        returnList = FALSE
+    )[, 1]
+
+# results %>% select(starts_with("theta"), item_9, item_10)
+```
+
+# output
+
+```{r}
+pars %>% write_rds("data-simulated/1_pars_rasch.rds")
+sim %>% write_rds("data-simulated/1_sim_rasch.rds")
+results %>% write_rds("data-simulated/1_results_rasch.rds")
+```
+
+```{r}
+results %>% 
+    mutate(bucket = cut_width(theta_1to9, 0.25)) %>% 
+    group_by(bucket, item_9) %>% 
+    summarize(y = mean(item_10)) %>% 
+    ggplot(aes(x = bucket, y = y, color = item_9)) +
+    geom_point()
+```
+
+

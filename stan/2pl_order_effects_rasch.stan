@@ -5,19 +5,25 @@ data {
   int<lower=1, upper=I> ii[N];  // question for n
   int<lower=1, upper=J> jj[N];  // person for n
   int<lower=0, upper=1> y[N];   // correctness for n
+
+  int<lower=0, upper=1> last[N];   // did that person get the last item correct
 }
 parameters {
-  vector<lower=0>[I] alpha;     // discrimination for item i
+  real boost;
   vector[I] beta;               // easiness for item i
   vector[J] theta;              // ability for person j
 }
 model {
   vector[N] eta;
-  alpha ~ lognormal(0, 2);
-  beta ~ normal(0, 2);
-  theta ~ normal(0, 1); // could replace with boxed uniform like JMLE
+
+  boost ~ normal(1, 2);
+  beta ~ normal(0, 1);
+  theta ~ normal(0, 1);
+
   for (n in 1:N)
-    eta[n] = alpha[ii[n]] * theta[jj[n]] + beta[ii[n]];
+    if (last[n] == 1 && ii[n] == 10)
+      eta[n] = beta[ii[n]] + theta[jj[n]] + boost;
+    else
+      eta[n] = beta[ii[n]] + theta[jj[n]];
   y ~ bernoulli_logit(eta);
 }
-

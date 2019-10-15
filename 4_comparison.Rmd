@@ -3,6 +3,8 @@ title: "4_comparison"
 output: github_document
 ---
 
+*The next best direction might be to actually look at and use Ben D and Josine code from my QP*
+
 ```{r}
 # load("4_comparison.Rdata")
 # save.image("4_comparison.Rdata")
@@ -22,7 +24,7 @@ source("R/stan.R")
 ```{r}
 set.seed(1)
 n_items <- 8
-n_students <- 5000
+n_students <- 500
 dim <- 1
 
 pars <-
@@ -43,6 +45,10 @@ sim <-
         itemtype = rep("3PL", n_items),
         returnList = TRUE
     )
+
+sim$Theta
+
+sim$data %>% as_tibble() %>% View()
 ```
 
 # models
@@ -211,6 +217,8 @@ formula_2pl <-
         nl = TRUE
     )
 
+stancode(brms_model)
+
 prior_2pl <- 
     prior("normal(0, 5)", class = "b", nlpar = "eta") + 
     prior("normal(0, 3)", class = "sd", nlpar = "eta", group = "person") + 
@@ -321,16 +329,18 @@ mcmc %>%
     geom_point(alpha = 0.1) +
     geom_smooth(se = FALSE, method = "lm")
 
+# ggmcmc
+
 mcmc %>% 
     spread_draws(beta[item]) %>% 
     ungroup() %>% 
-    filter(item == 1) %>% 
+    filter(item == 7) %>% 
     select(.draw, beta) %>% 
     left_join(
         mcmc %>% 
     spread_draws(beta[item]) %>% 
     ungroup() %>% 
-    filter(item == 4) %>% 
+    filter(item == 8) %>% 
     select(.draw, beta1 = beta)
     ) %>% 
     ggplot(aes(x = beta, y = beta1)) +
