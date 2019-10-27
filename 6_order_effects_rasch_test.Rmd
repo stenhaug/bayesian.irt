@@ -34,14 +34,6 @@ stan_data$last <-
     mutate(last = lag(y) %>% replace_na(0)) %>% 
     ungroup() %>% 
     pull(last)
-
-pars$d %>% sum()
-
-results$theta_1to9 %>% mean()
-
-results %>% 
-    group_by(item_9) %>% 
-    summarize(mean(item_10))
 ```
 
 fit the model
@@ -49,7 +41,7 @@ fit the model
 ```{r}
 model <- 
     stan(
-        file = "stan/2pl_order_effects_rasch_set_sum.stan",
+        file = "stan/2pl_order_effects_rasch_set_sum_TEST.stan",
         data = stan_data,
         seed = 1,
         chains = 4,
@@ -58,13 +50,15 @@ model <-
         control = list(adapt_delta = 0.9)
     )
 
-write_rds(model, "data-simulated/6_order.rds")
+write_rds(model, "data-simulated/6_order_TEST.rds")
 
 get_variables(model)[1:10]
 plot(model, pars = "boost")
 plot(model, pars = "betareal")
 plot(model, pars = "beta")
 ```
+
+explore
 
 ```{r}
 real <- model %>% spread_draws(betareal[item])

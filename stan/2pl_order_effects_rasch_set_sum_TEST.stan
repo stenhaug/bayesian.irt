@@ -33,7 +33,7 @@ model {
 
   for (n in 1:N)
     if (last[n] == 1 && ii[n] == 10)
-      eta[n] = betareal[ii[n]] + theta[jj[n]] + boost;
+      eta[n] = boost;
     else
       eta[n] = betareal[ii[n]] + theta[jj[n]];
   y ~ bernoulli_logit(eta);

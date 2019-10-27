@@ -22,6 +22,8 @@ pars <-
         a1 = 1,
         d = rnorm(n_items)
     ) 
+
+pars$d[9] <- pars$d[9] - sum(pars$d)
 ```
 
 # first 9 items
